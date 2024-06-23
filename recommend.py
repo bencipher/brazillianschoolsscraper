@@ -17,7 +17,7 @@ from models import UserInput
 env_config = EnvironmentConfig(".env")
 
 # Initialize Firebase service
-firebase_service = FirebaseService("service_account_key.json")  # Replace with your service account key path
+firebase_service = FirebaseService(env_config.get_env_variable('CREDENTIALS_JSON_PATH'))
 
 
 # Fetch all data from Firebase
