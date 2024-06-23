@@ -130,7 +130,7 @@ def recommend_courses_from_vector(cv_text, llm_service):
 
 
 # Streamlit app
-def main():
+def start_app():
     st.title("University and Course Recommendation")
     st.write("Please enter your CV or experience details to get recommendations for universities and courses.")
 
@@ -164,4 +164,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    start_app()
