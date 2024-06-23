@@ -8,6 +8,7 @@ env_config = EnvironmentConfig(dotenv_path)
 # Function to save credentials to file
 def save_credentials_to_file(env_var_name, file_name):
     credentials_json = env_config.get_env_variable(env_var_name)
+    print('{credentials_json=}')
     if credentials_json:
         with open(file_name, 'w') as f:
             f.write(credentials_json)
