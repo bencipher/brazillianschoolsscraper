@@ -1,29 +1,22 @@
 import os
 import time
-from enum import Enum
-from typing import Optional
 
-from dotenv import load_dotenv
 from firebase_admin.exceptions import FirebaseError
 from langchain_core.exceptions import OutputParserException
 from langchain_core.output_parsers import PydanticOutputParser
 from langchain_core.prompts import PromptTemplate
 from langchain_google_genai import ChatGoogleGenerativeAI
-from pydantic import BaseModel
+
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import StaleElementReferenceException, TimeoutException, WebDriverException
-import firebase_admin
-from firebase_admin import credentials, firestore
 
-load_dotenv()
-# Initialize Firebase Admin SDK with your service account key
-cred = credentials.Certificate("minsdk-nweuu-4b3524132f.json")
-firebase_admin.initialize_app(cred)
-db = firestore.client()
+from llm_prompts import load_prompt
+from models import School
+from recommend import firebase_service
 
 
 def scrape() -> list:
@@ -104,42 +97,13 @@ def scrape() -> list:
     return schools_and_courses
 
 
-class ProgramEnum(Enum):
-    mtech = "Master's"
-    phd = 'PhD'
-
-
-class CourseType(BaseModel):
-    title: str
-    level: ProgramEnum
-
-
-class School(BaseModel):
-    school: str
-    courses: Optional[list[CourseType]]
-
-
 def translate(data):
     # Define the template
     output_parser = PydanticOutputParser(pydantic_object=School)
     format_instructions = output_parser.get_format_instructions()
     template = PromptTemplate(
         input_variables=["universities_and_courses", "format_instructions"],
-        template="""
-        Translate the following universities and their courses into English. Specify whether each course is a 
-        Master's or a PhD program. Ensure all school names and their courses are translated completely:
-
-        Universities and Courses:
-        {universities_and_courses}
-
-        Instructions:
-        {format_instructions}
-
-        Ensure all keys and values are enclosed in double quotes. Translate every university and course listed
-        without skipping any. If the input is too long, continue until all content is translated. Ensure the 
-        entire input is fully translated to English language.
-        """
-
+        template=load_prompt
     )
 
     llm = ChatGoogleGenerativeAI(
@@ -158,6 +122,7 @@ def translate(data):
 
 
 def save_to_firebase(data):
+    db = firebase_service.get_firestore_client()
     for entry in data:
         # Create a new document in the 'universities' collection
         university_ref = db.collection('university').document()

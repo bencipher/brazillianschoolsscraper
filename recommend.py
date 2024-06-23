@@ -1,38 +1,30 @@
-import os
 import json
 
+import tiktoken
+import streamlit as st
+from pydantic import BaseModel, ValidationError
+from langchain_core.prompts import PromptTemplate
 from langchain.chains.retrieval_qa.base import RetrievalQA
 from langchain_community.vectorstores import FAISS
-import firebase_admin
-import streamlit as st
-import tiktoken
-from dotenv import load_dotenv
-from langchain_community.embeddings import HuggingFaceInstructEmbeddings
-from langchain_core.documents import Document
-from pydantic import BaseModel, ValidationError
-from firebase_admin import credentials, firestore
-from langchain_core.prompts import PromptTemplate
-from langchain_google_genai import ChatGoogleGenerativeAI
-from firebase_admin.exceptions import FirebaseError
 
-load_dotenv()
-# Initialize Firebase
-cred = credentials.Certificate("minsdk-nweuu-4b3524132f.json")  # Replace with your service account key
-# Initialize Firebase (ensure this is done only once)
-if not firebase_admin._apps:
-    firebase_app = firebase_admin.initialize_app(cred)
-db = firestore.client()
+from configs.env_config import EnvironmentConfig
+from configs.firebase import FirebaseService
+from configs.google_generative_ai import GoogleGenerativeAIService
+from llm_prompts import retrieve_prompt
+from models import UserInput
 
+# Load environment variables
+env_config = EnvironmentConfig(".env")
 
-# Define a Pydantic model for user input validation
-class UserInput(BaseModel):
-    cv: str
+# Initialize Firebase service
+firebase_service = FirebaseService("minsdk-nweuu-4b3524132f.json")  # Replace with your service account key path
 
 
 # Fetch all data from Firebase
 @st.cache_data
 def load_data_from_db():
     try:
+        db = firebase_service.get_firestore_client()
         universities_ref = db.collection('universities')
         university_with_courses = {}
 
@@ -49,11 +41,12 @@ def load_data_from_db():
             university_with_courses[university_name] = courses
 
         return university_with_courses
-    except FirebaseError as e:
-        print("FirebaseError:", e)  # Debug statement
+    except Exception as e:
+        print("Error:", e)  # Debug statement
         return None
 
 
+# Generate documents for vector database
 def generate_documents(universities_and_courses):
     documents = []
     texts_to_embed = []
@@ -72,74 +65,52 @@ def generate_documents(universities_and_courses):
     return documents, texts_to_embed
 
 
+# Create vector database with FAISS
 def create_vector_db(documents, texts_to_embed, file_path="faiss_index"):
-    instructor_embeddings = HuggingFaceInstructEmbeddings(model_name="hkunlp/instructor-large")
-    vectordb = FAISS.from_texts(texts=texts_to_embed, embedding=instructor_embeddings,
-                                metadatas=[doc['metadata'] for doc in documents])
+    service = GoogleGenerativeAIService(env_config)
+    huggingface_embeddings = service.get_huggingface_embeddings()
 
+    vectordb = FAISS.from_texts(texts=texts_to_embed, embedding=huggingface_embeddings,
+                                metadatas=[doc['metadata'] for doc in documents])
     vectordb.save_local(file_path)
     print('DONE')
 
 
-# Translate and recommend courses
-def recommend_courses_from_vector(cv_text):
-    # Initialize the instructor embeddings
-    instructor_embeddings = HuggingFaceInstructEmbeddings(model_name="hkunlp/instructor-large")
+# Recommend courses based on CV using vector database
+def recommend_courses_from_vector(cv_text, llm_service):
+    # Load HuggingFace embeddings
+    service = GoogleGenerativeAIService(env_config)
+    huggingface_embeddings = service.get_huggingface_embeddings()
 
     # Load the vector database
-    vectordb = FAISS.load_local('faiss_index', instructor_embeddings, allow_dangerous_deserialization=True)
+    vectordb = FAISS.load_local('faiss_index', huggingface_embeddings, allow_dangerous_deserialization=True)
 
     # Create a retriever for querying the vector database
     retriever = vectordb.as_retriever(score_threshold=0.7)
 
     # Retrieve relevant documents based on the CV text
-    retrieved_docs = retriever.get_relevant_documents(cv_text)
-
+    retrieved_docs = retriever.invoke(cv_text)
+    print(retrieved_docs)
     # Format the retrieved data for the prompt
     universities_and_courses = "\n".join(
         [f"{doc.metadata['school']}: {doc.metadata['course']} ({doc.metadata['level']})" for doc in retrieved_docs]
     )
 
     # Define the prompt template
-    prompt_template = """
-    Based on the following CV or experience provided by the user:
-    {question}
 
-    Recommend universities and their courses that match or are closely related to the user's interests and qualifications specified in their CV from the following list of universities and courses:
-    {context}
+    prompt_text = retrieve_prompt.format(question=cv_text, context=universities_and_courses)
 
-    If a perfect match is not found, recommend courses that are related or in a similar field. Avoid recommending unrelated courses.
-
-    Please provide the recommendations in the following format:
-    {{
-        "recommendations": [
-            {{
-                "school": "<University name>",
-                "courses": [
-                    {{"name": "<Course name>", "level": "<'Master's' or 'PhD'>"}},
-                    ...
-                ]
-            }},
-            ...
-        ]
-    }}
-    """
-
-    # Format the prompt with the CV and retrieved universities and courses data
-    prompt_text = prompt_template.format(question=cv_text, context=universities_and_courses)
-
-    # Initialize the language model
-    llm = ChatGoogleGenerativeAI(
-        model="gemini-1.5-pro", google_api_key=os.environ.get('GEMINI_API_KEY')
-    )
+    # Get LLM instance from the service
+    llm_instance = llm_service.get_llm_instance()
 
     # Define the prompt for the LLM chain
     prompt = PromptTemplate(
         input_variables=["context", "question"],
-        template=prompt_template
+        template=retrieve_prompt
     )
+
     # Create the RetrievalQA chain
-    chain = RetrievalQA.from_chain_type(llm=llm,
+    chain = RetrievalQA.from_chain_type(llm=llm_instance,
                                         chain_type="stuff",
                                         retriever=retriever,
                                         input_key="query",
@@ -149,12 +120,10 @@ def recommend_courses_from_vector(cv_text):
     # Run the chain and get the response
     resp = chain({"query": cv_text, "universities_and_courses": universities_and_courses})
 
-    # Tokenize the prompt text and count tokens
+    # Print token count (assuming `tiktoken` usage)
     tokenizer = tiktoken.get_encoding("p50k_base")
     tokens = tokenizer.encode(prompt_text)
     token_count = len(tokens)
-
-    # Print token count
     print(f"Token count: {token_count}")
 
     return resp
@@ -172,8 +141,12 @@ def main():
             # Validate user input
             user_input = UserInput(cv=cv_input)
 
+            # Initialize LLM service
+            llm_service = GoogleGenerativeAIService(env_config)
+
             # Get recommendations
-            recommendations = recommend_courses_from_vector(user_input.cv)
+            recommendations = recommend_courses_from_vector(user_input.cv, llm_service)
+
             # Parse and display recommendations
             try:
                 recommendations_json = json.loads(recommendations.get('result'))
@@ -192,4 +165,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
