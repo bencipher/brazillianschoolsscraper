@@ -259,17 +259,7 @@ ujson==5.10.0
 uritemplate==4.1.1
 urllib3==1.26.12
 userpath==1.8.0
-uvicorn==0.30.0
 varint==1.0.2
 vine==5.0.0
 virtualenv==20.17.1
 virtualenv-clone==0.5.7
-vvm==0.1.0
-vyper==0.3.7
-watchdog==4.0.1
-watchfiles==0.22.0
-Werkzeug==3.0.3
-wrapt==1.14.1
-wsproto==1.2.0
-zope.event==5.0
-zope.interface==6.4.post2
