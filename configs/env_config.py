@@ -14,5 +14,5 @@ class EnvironmentConfig:
 
     def get_env_variable(self, key):
         self.load_env()
-        print('loading {key=}')
+        print(f'loading {key=}')
         return os.getenv(key)

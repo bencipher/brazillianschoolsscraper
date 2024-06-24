@@ -3,7 +3,7 @@ import json
 import tiktoken
 import streamlit as st
 from pydantic import BaseModel, ValidationError
-from langchain_core.prompts import PromptTemplate
+from langchain_core.prompts import PromptTemplate, FewShotPromptTemplate
 from langchain.chains.retrieval_qa.base import RetrievalQA
 from langchain_community.vectorstores import FAISS
 
@@ -86,11 +86,13 @@ def recommend_courses_from_vector(cv_text, llm_service):
     vectordb = FAISS.load_local('faiss_index', huggingface_embeddings, allow_dangerous_deserialization=True)
 
     # Create a retriever for querying the vector database
-    retriever = vectordb.as_retriever(score_threshold=0.7)
+    retriever = vectordb.as_retriever(score_threshold=0.7, search_kwargs={"k": 10, "fetch_k": 30})
+    similar = vectordb.similarity_search('Chemistry', fetch_k=30, k=15)
+    print(f'\nFor Chemistry: {similar=}\nSize: {len(similar)}\n')
 
     # Retrieve relevant documents based on the CV text
     retrieved_docs = retriever.invoke(cv_text)
-    print(retrieved_docs)
+    print(f'\n{retrieved_docs=}\nSize: {len(retrieved_docs)}\n')
     # Format the retrieved data for the prompt
     universities_and_courses = "\n".join(
         [f"{doc.metadata['school']}: {doc.metadata['course']} ({doc.metadata['level']})" for doc in retrieved_docs]
@@ -108,17 +110,17 @@ def recommend_courses_from_vector(cv_text, llm_service):
         input_variables=["context", "question"],
         template=retrieve_prompt
     )
-
+    # FewShotPromptTemplate()
     # Create the RetrievalQA chain
     chain = RetrievalQA.from_chain_type(llm=llm_instance,
-                                        chain_type="stuff",
+                                        chain_type="stuff",  # map_reduce makes more calls but map_rerank is not bad
                                         retriever=retriever,
                                         input_key="query",
                                         return_source_documents=True,
                                         chain_type_kwargs={"prompt": prompt})
 
     # Run the chain and get the response
-    resp = chain({"query": cv_text, "universities_and_courses": universities_and_courses})
+    resp = chain.invoke({"query": cv_text, "universities_and_courses": universities_and_courses})
 
     # Print token count (assuming `tiktoken` usage)
     tokenizer = tiktoken.get_encoding("p50k_base")
@@ -137,6 +139,7 @@ def start_app():
     cv_input = st.text_area("Enter the field you are interested in")
 
     if st.button("Get Recommendations"):
+
         try:
             # Validate user input
             user_input = UserInput(cv=cv_input)
@@ -149,6 +152,7 @@ def start_app():
 
             # Parse and display recommendations
             try:
+                print(recommendations.get('result'))
                 recommendations_json = json.loads(recommendations.get('result'))
                 for rec in recommendations_json["recommendations"]:
                     st.write(f"**University:** {rec['school']}")
