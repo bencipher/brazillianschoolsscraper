@@ -149,11 +149,13 @@ def start_app():
 
             # Get recommendations
             recommendations = recommend_courses_from_vector(user_input.cv, llm_service)
-
+            res = recommendations.get('result')
             # Parse and display recommendations
             try:
-                print(recommendations.get('result'))
-                recommendations_json = json.loads(recommendations.get('result'))
+                if res[0] != "{":
+                    res = res[2:-3]
+                print(res)
+                recommendations_json = json.loads(res)
                 for rec in recommendations_json["recommendations"]:
                     st.write(f"**University:** {rec['school']}")
                     st.write("**Courses:**")

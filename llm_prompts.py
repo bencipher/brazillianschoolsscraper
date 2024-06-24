@@ -11,7 +11,7 @@ If a perfect match is not found, recommend courses that are related or in a simi
 
 Please ensure all recommendations are translated to English before returning.
 
-Return the recommendations in a valid Python dictionary format as follows:
+Response Format:
 {{
     "recommendations": [
         {{
@@ -179,4 +179,21 @@ Output:
         }}
     ]
 }}
+
+Ensure the response is a valid JSON object with no extra markings or text added:
 """
+
+load_prompt = """
+        Translate the following universities and their courses into English. Specify whether each course is a 
+        Master's or a PhD program. Ensure all school names and their courses are translated completely:
+
+        Universities and Courses:
+        {universities_and_courses}
+
+        Instructions:
+        {format_instructions}
+
+        Ensure all keys and values are enclosed in double quotes. Translate every university and course listed
+        without skipping any. If the input is too long, continue until all content is translated. Ensure the 
+        entire input is fully translated to English language.
+        """
