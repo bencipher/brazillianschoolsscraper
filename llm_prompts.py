@@ -2,31 +2,15 @@ retrieve_prompt = """
 Based on the following CV or experience provided by the user:
 {question}
 
-1. Identify and list all distinct academic fields or career opportunities mentioned in the input.
+Identify and list all distinct academic fields or career opportunities mentioned in the input.
 
-2. For each field or opportunity, recommend universities and their courses that match or are 
-closely related to the user's interests and qualifications specified in their CV from the 
-following list of universities and courses:
-{context}
+
 
 If a perfect match is not found, recommend courses that are related or in a similar field. Avoid recommending unrelated courses.
 
 Please ensure all recommendations are translated to English before returning.
 
-Response Format:
-{{
-    "recommendations": [
-        {{
-            "school": "<University name>",
-            "courses": [
-                {{"name": "<Course name>", "level": "<'Master's' or 'PhD'>"}},
-                ...
-            ]
-        }},
-        ...
-    ]
-}}
-
+Here are some examples:
 Example 1:
 
 Input: "I have experience in cyber security, AI, and cloud computing."
@@ -182,9 +166,23 @@ Output:
     ]
 }}
 
+Task: For each field or opportunity, recommend universities and their courses that match or are 
+closely related to the user's interests and qualifications specified in their CV from the 
+following list of universities and courses:
+{context}
+Response Format:
+{{
+    "recommendations": [
+        {{
+            "school": "<University name>",
+            "courses": [
+                {{"name": "<Course name>", "level": "<'Master's' or 'PhD'>"}},
+            ]
+        }},
+    ]
+}}
 
-
-Ensure the response is a valid JSON object with no extra markings or text added
+Ensure all the schools and courses are translated to English language
 """
 
 load_prompt = """
