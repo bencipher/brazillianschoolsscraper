@@ -18,33 +18,33 @@ from models import UserInput
 env_config = EnvironmentConfig(".env")
 
 # Initialize Firebase service
-firebase_service = FirebaseService(env_config.get_env_variable('CREDENTIALS_JSON_PATH'))
+# firebase_service = FirebaseService(env_config.get_env_variable('CREDENTIALS_JSON_PATH'))
 
 
 # Fetch all data from Firebase
 @st.cache_data
-def load_data_from_db():
-    try:
-        db = firebase_service.get_firestore_client()
-        universities_ref = db.collection('universities')
-        university_with_courses = {}
-
-        for university_doc in universities_ref.stream():
-            university_data = university_doc.to_dict()
-            university_name = university_data['name']
-
-            courses_ref = university_doc.reference.collection('courses')
-            courses = []
-            for course_doc in courses_ref.stream():
-                course_data = course_doc.to_dict()
-                courses.append(course_data)
-
-            university_with_courses[university_name] = courses
-
-        return university_with_courses
-    except Exception as e:
-        print("Error:", e)  # Debug statement
-        return None
+# def load_data_from_db():
+#     try:
+#         db = firebase_service.get_firestore_client()
+#         universities_ref = db.collection('universities')
+#         university_with_courses = {}
+#
+#         for university_doc in universities_ref.stream():
+#             university_data = university_doc.to_dict()
+#             university_name = university_data['name']
+#
+#             courses_ref = university_doc.reference.collection('courses')
+#             courses = []
+#             for course_doc in courses_ref.stream():
+#                 course_data = course_doc.to_dict()
+#                 courses.append(course_data)
+#
+#             university_with_courses[university_name] = courses
+#
+#         return university_with_courses
+#     except Exception as e:
+#         print("Error:", e)  # Debug statement
+#         return None
 
 
 # Generate documents for vector database
