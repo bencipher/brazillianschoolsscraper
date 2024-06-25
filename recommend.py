@@ -2,14 +2,13 @@ import json
 
 import tiktoken
 import streamlit as st
-from langchain_core.output_parsers import PydanticOutputParser
 from pydantic import BaseModel, ValidationError
 from langchain_core.prompts import PromptTemplate, FewShotPromptTemplate
 from langchain.chains.retrieval_qa.base import RetrievalQA
 from langchain_community.vectorstores import FAISS
 
 from configs.env_config import EnvironmentConfig
-from configs.firebase import FirebaseService
+# from configs.firebase import FirebaseService
 from configs.google_generative_ai import GoogleGenerativeAIService
 from llm_prompts import retrieve_prompt
 from models import UserInput
