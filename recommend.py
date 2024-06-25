@@ -3,7 +3,7 @@ import json
 import tiktoken
 import streamlit as st
 from pydantic import BaseModel, ValidationError
-from langchain_core.prompts import PromptTemplate, FewShotPromptTemplate
+from langchain_core.prompts import PromptTemplate
 from langchain.chains.retrieval_qa.base import RetrievalQA
 from langchain_community.vectorstores import FAISS
 
@@ -15,6 +15,7 @@ from models import UserInput
 
 # Load environment variables
 env_config = EnvironmentConfig(".env")
+
 
 # Initialize Firebase service
 # firebase_service = FirebaseService(env_config.get_env_variable('CREDENTIALS_JSON_PATH'))
@@ -44,7 +45,6 @@ env_config = EnvironmentConfig(".env")
 #     except Exception as e:
 #         print("Error:", e)  # Debug statement
 #         return None
-
 
 # Generate documents for vector database
 def generate_documents(universities_and_courses):
@@ -103,6 +103,7 @@ def recommend_courses_from_vector(cv_text, llm_service):
     llm_instance = llm_service.get_llm_instance()
     # Define the prompt for the LLM chain
     prompt = PromptTemplate(
+        input_variables=["question", "universities_and_courses"],
         template=retrieve_prompt
     )
     # FewShotPromptTemplate()
@@ -110,19 +111,16 @@ def recommend_courses_from_vector(cv_text, llm_service):
     chain = RetrievalQA.from_chain_type(llm=llm_instance,
                                         chain_type="stuff",  # map_reduce makes more calls but map_rerank is not bad
                                         retriever=retriever,
-                                        input_key="query",
+                                        input_key="question",
                                         return_source_documents=True,
                                         chain_type_kwargs={"prompt": prompt})
-
-    # Run the chain and get the response
-    resp = chain.invoke({"query": cv_text, "universities_and_courses": universities_and_courses})
+    resp = chain.invoke({"question": cv_text, "universities_and_courses": universities_and_courses})
     print(resp)
     # Print token count (assuming `tiktoken` usage)
     tokenizer = tiktoken.get_encoding("p50k_base")
     tokens = tokenizer.encode(prompt_text)
     token_count = len(tokens)
     print(f"Token count: {token_count}")
-
     return resp
 
 
