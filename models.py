@@ -20,7 +20,3 @@ class School(BaseModel):
 
 class UserInput(BaseModel):
     cv: str
-
-
-class RecommendationsResponse(BaseModel):
-    recommendations: List[School]

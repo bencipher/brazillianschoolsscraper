@@ -88,20 +88,15 @@ def recommend_courses_from_vector(cv_text, llm_service):
 
     # Create a retriever for querying the vector database
     retriever = vectordb.as_retriever(score_threshold=0.7, search_kwargs={"k": 10, "fetch_k": 30})
-    similar = vectordb.similarity_search('Chemistry', fetch_k=30, k=15)
-    print(f'\nFor Chemistry: {similar=}\nSize: {len(similar)}\n')
+    # similar = vectordb.similarity_search('Chemistry', fetch_k=30, k=15)
 
     # Retrieve relevant documents based on the CV text
     retrieved_docs = retriever.invoke(cv_text)
-    print(f'\n{retrieved_docs=}\nSize: {len(retrieved_docs)}\n')
     # Format the retrieved data for the prompt
     universities_and_courses = "\n".join(
         [f"{doc.metadata['school']}: {doc.metadata['course']} ({doc.metadata['level']})" for doc in retrieved_docs]
     )
-    output_parser = PydanticOutputParser(pydantic_object=RecommendationsResponse)
-    format_instructions = output_parser.get_format_instructions()
 
-    universities_and_courses += f"\n Instructions:\n{format_instructions}"
     # Define the prompt template
     prompt_text = retrieve_prompt.format(question=cv_text, context=universities_and_courses)
 
@@ -122,7 +117,7 @@ def recommend_courses_from_vector(cv_text, llm_service):
 
     # Run the chain and get the response
     resp = chain.invoke({"query": cv_text, "universities_and_courses": universities_and_courses})
-
+    print(resp)
     # Print token count (assuming `tiktoken` usage)
     tokenizer = tiktoken.get_encoding("p50k_base")
     tokens = tokenizer.encode(prompt_text)
@@ -153,9 +148,6 @@ def start_app():
             res = recommendations.get('result')
             # Parse and display recommendations
             try:
-                if res[0] != "{":
-                    res = res[2:-3]
-                print(res)
                 recommendations_json = json.loads(res)
                 for rec in recommendations_json["recommendations"]:
                     st.write(f"**University:** {rec['school']}")
