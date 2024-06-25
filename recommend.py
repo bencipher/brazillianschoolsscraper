@@ -2,6 +2,7 @@ import json
 
 import tiktoken
 import streamlit as st
+from langchain_core.output_parsers import PydanticOutputParser
 from pydantic import BaseModel, ValidationError
 from langchain_core.prompts import PromptTemplate, FewShotPromptTemplate
 from langchain.chains.retrieval_qa.base import RetrievalQA
@@ -11,7 +12,7 @@ from configs.env_config import EnvironmentConfig
 from configs.firebase import FirebaseService
 from configs.google_generative_ai import GoogleGenerativeAIService
 from llm_prompts import retrieve_prompt
-from models import UserInput
+from models import UserInput, RecommendationsResponse
 
 # Load environment variables
 env_config = EnvironmentConfig(".env")
@@ -97,17 +98,17 @@ def recommend_courses_from_vector(cv_text, llm_service):
     universities_and_courses = "\n".join(
         [f"{doc.metadata['school']}: {doc.metadata['course']} ({doc.metadata['level']})" for doc in retrieved_docs]
     )
+    output_parser = PydanticOutputParser(pydantic_object=RecommendationsResponse)
+    format_instructions = output_parser.get_format_instructions()
 
+    universities_and_courses += f"\n Instructions:\n{format_instructions}"
     # Define the prompt template
-
     prompt_text = retrieve_prompt.format(question=cv_text, context=universities_and_courses)
 
     # Get LLM instance from the service
     llm_instance = llm_service.get_llm_instance()
-
     # Define the prompt for the LLM chain
     prompt = PromptTemplate(
-        input_variables=["context", "question"],
         template=retrieve_prompt
     )
     # FewShotPromptTemplate()

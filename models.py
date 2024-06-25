@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel
 
 
@@ -20,3 +20,7 @@ class School(BaseModel):
 
 class UserInput(BaseModel):
     cv: str
+
+
+class RecommendationsResponse(BaseModel):
+    recommendations: List[School]

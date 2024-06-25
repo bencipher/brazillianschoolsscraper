@@ -4,7 +4,9 @@ Based on the following CV or experience provided by the user:
 
 1. Identify and list all distinct academic fields or career opportunities mentioned in the input.
 
-2. For each field or opportunity, recommend universities and their courses that match or are closely related to the user's interests and qualifications specified in their CV from the following list of universities and courses:
+2. For each field or opportunity, recommend universities and their courses that match or are 
+closely related to the user's interests and qualifications specified in their CV from the 
+following list of universities and courses:
 {context}
 
 If a perfect match is not found, recommend courses that are related or in a similar field. Avoid recommending unrelated courses.
@@ -180,7 +182,9 @@ Output:
     ]
 }}
 
-Ensure the response is a valid JSON object with no extra markings or text added:
+
+
+Ensure the response is a valid JSON object with no extra markings or text added
 """
 
 load_prompt = """
