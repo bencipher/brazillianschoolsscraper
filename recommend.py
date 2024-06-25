@@ -12,7 +12,7 @@ from configs.env_config import EnvironmentConfig
 from configs.firebase import FirebaseService
 from configs.google_generative_ai import GoogleGenerativeAIService
 from llm_prompts import retrieve_prompt
-from models import UserInput, RecommendationsResponse
+from models import UserInput
 
 # Load environment variables
 env_config = EnvironmentConfig(".env")
